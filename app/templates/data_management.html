@@ -1,0 +1,1084 @@
+<!-- data_management.html 模板修改 -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户权限系统 - 数据管理</title>
+    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+    <style>
+        /* 侧边栏样式 */
+        .sidebar {
+            height: 100vh;
+            background-color: #343a40;
+            color: white;
+            padding: 20px;
+        }
+
+            .sidebar a {
+                color: white;
+                text-decoration: none;
+                display: block;
+                padding: 10px 15px;
+                margin-bottom: 5px;
+                border-radius: 4px;
+            }
+
+                .sidebar a:hover {
+                    background-color: #495057;
+                }
+
+        /* 主内容区样式 */
+        .main-content {
+            padding: 20px;
+        }
+
+        /* 提示消息样式 */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1100;
+        }
+
+        /* AI助手样式 */
+        #aiAssistant {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+
+        #aiAssistantBtn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            font-size: 24px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+            #aiAssistantBtn:hover {
+                background-color: #0069d9;
+                transform: scale(1.05);
+            }
+
+        #aiAssistantPanel {
+            display: none;
+            width: 350px;
+            height: 500px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            overflow: hidden;
+            flex-direction: column;
+        }
+
+        .ai-header {
+            background: #343a40;
+            color: white;
+            padding: 10px 15px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .ai-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .ai-input-area {
+            padding: 10px;
+            border-top: 1px solid #eee;
+            background: #f8f9fa;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 10px 15px;
+            border-radius: 18px;
+            word-wrap: break-word;
+            line-height: 1.4;
+        }
+
+        .user-message {
+            margin-left: auto;
+            background: #007bff;
+            color: white;
+            border-bottom-right-radius: 5px;
+        }
+
+        .ai-message {
+            margin-right: auto;
+            background: #f1f1f1;
+            color: #333;
+            border-bottom-left-radius: 5px;
+        }
+
+        .typing-indicator {
+            display: flex;
+            gap: 5px;
+            padding: 10px 15px;
+            background: #f1f1f1;
+            border-radius: 18px;
+            border-bottom-left-radius: 5px;
+            width: fit-content;
+            margin-bottom: 12px;
+        }
+
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background: #666;
+            border-radius: 50%;
+            animation: typingAnimation 1.4s infinite ease-in-out;
+        }
+
+            .typing-dot:nth-child(1) {
+                animation-delay: 0s;
+            }
+
+            .typing-dot:nth-child(2) {
+                animation-delay: 0.2s;
+            }
+
+            .typing-dot:nth-child(3) {
+                animation-delay: 0.4s;
+            }
+
+        @keyframes typingAnimation {
+            0%, 60%, 100% {
+                transform: translateY(0);
+            }
+
+            30% {
+                transform: translateY(-5px);
+            }
+        }
+
+        /* 表格样式增强 */
+        .table-responsive {
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        .table th {
+            background-color: #343a40;
+            color: white;
+        }
+
+        .table td, .table th {
+            vertical-align: middle;
+        }
+
+        /* 按钮样式增强 */
+        .btn-sm {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/main">用户权限系统</a>
+            <div class="d-flex">
+                <span class="navbar-text me-3">欢迎, {{ session.user.username }}</span>
+                <a href="/logout" class="btn btn-outline-light">退出登录</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 页面主体 -->
+    <div class="container-fluid">
+        <div class="row">
+            <!-- 侧边栏 -->
+            <div class="col-md-2 sidebar">
+                <a href="/main">首页</a>
+                <a href="/data_management">数据管理</a>
+                <!-- 只有管理员可以看到用户管理菜单 -->
+                {% if session.user.role == 'admin' %}
+                <a href="/user_management">用户管理</a>
+                {% endif %}
+            </div>
+
+            <!-- 主内容区 -->
+            <div class="col-md-10 main-content">
+                <div class="page-header">
+                    <h1>数据管理</h1>
+                    <p class="lead">根据您的权限管理数据</p>
+                    <p>您的角色: {{ session.user.role }}</p>
+                </div>
+
+                <!-- 数据搜索区域 -->
+                <div class="mb-4">
+                    <div class="input-group">
+                        <input type="text" id="search-input" class="form-control" placeholder="搜索数据...">
+                        <button class="btn btn-primary" id="search-btn">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z" />
+                            </svg>
+                            搜索
+                        </button>
+                        <!-- 只有管理员和设计师可以添加数据 -->
+                        {% if session.user.role == 'admin' or session.user.role == 'designer' %}
+                        <button class="btn btn-success ms-2" id="add-data-btn">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z" />
+                            </svg>
+                            添加数据
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- 数据列表区域 -->
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>名称</th>
+                                <th>类型</th>
+                                <th>创建者</th>
+                                <th>创建时间</th>
+                                <th>更新时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="data-table-body">
+                            <!-- 数据将通过JavaScript动态加载 -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 分页控件 -->
+                <nav aria-label="Page navigation">
+                    <ul class="pagination justify-content-center" id="pagination">
+                        <!-- 分页控件将通过JavaScript动态生成 -->
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI助手 -->
+    <div id="aiAssistant">
+        <div id="aiAssistantPanel">
+            <div class="ai-header">
+                <span>AI助手</span>
+                <button type="button" class="btn-close btn-close-white" id="closeAiPanel"></button>
+            </div>
+            <div class="ai-messages" id="aiMessages">
+                <div class="message ai-message">
+                    您好！我是您的AI助手，可以回答关于本系统功能的问题。例如：
+                    <ul class="mt-2 mb-0">
+                        <li>不同用户角色的权限区别？</li>
+                        <li>如何添加新数据？</li>
+                        <li>如何搜索特定数据？</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="ai-input-area">
+                <div class="input-group">
+                    <input type="text" class="form-control" id="aiQuestion" placeholder="输入您的问题..." autocomplete="off">
+                    <button class="btn btn-primary" type="button" id="sendAiQuestion">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M15.854.146a.5.5 0 0 1 .11.54l-5.819 14.547a.5.5 0 0 1-.933.008L5.354 9.854a.5.5 0 1 1 .708-.708L10.5 13.793l5.439-5.44a.5.5 0 0 1 .708-.708l.002.001z" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <button class="btn btn-primary" id="aiAssistantBtn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M6 12.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5ZM3 8.062C3 6.76 4.235 5.765 5.53 5.886a26.58 26.58 0 0 0 4.94 0C11.765 5.765 13 6.76 13 8.062v1.157a.933.933 0 0 1-.765.935c-.845.147-2.34.346-4.235.346-1.895 0-3.39-.2-4.235-.346A.933.933 0 0 1 3 9.219V8.062Zm4.542-.827a.25.25 0 0 0-.217.068l-.92.9a24.767 24.767 0 0 1-1.871-.183.25.25 0 0 0-.068.495c.55.076 1.232.149 2.02.193a.25.25 0 0 0 .189-.071l.754-.736.847 1.71a.25.25 0 0 0 .404.062l.932-.97a25.286 25.286 0 0 0 1.922-.188.25.25 0 0 0-.068-.495c-.538.074-1.207.145-1.98.189a.25.25 0 0 0-.166.076l-.754.785-.842-1.7a.25.25 0 0 0-.182-.135Z" />
+                <path d="M8.5 1.866a1 1 0 1 0-1 0V3h-2A4.5 4.5 0 0 0 1 7.5V8a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1v1a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-1a1 1 0 0 0 1-1V9a1 1 0 0 0-1-1v-.5A4.5 4.5 0 0 0 10.5 3h-2V1.866ZM14 7.5V13a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7.5A3.5 3.5 0 0 1 5.5 4h5A3.5 3.5 0 0 1 14 7.5Z" />
+            </svg>
+        </button>
+    </div>
+
+    <!-- 提示消息容器 -->
+    <div class="toast-container">
+        <div id="notification-toast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header">
+                <strong class="me-auto" id="toast-title">通知</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body" id="toast-message">
+                操作成功
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加/编辑数据模态框 -->
+    <div class="modal fade" id="data-modal" tabindex="-1" aria-labelledby="data-modal-label" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="data-modal-label">添加数据</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="data-form">
+                        <input type="hidden" id="data-id" name="data_id">
+
+                        <div class="mb-3">
+                            <label for="data-name" class="form-label">数据名称</label>
+                            <input type="text" class="form-control" id="data-name" name="data_name" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="data-type" class="form-label">数据类型</label>
+                            <select class="form-select" id="data-type" name="data_type" required>
+                                <option value="query">查询</option>
+                                <option value="report">报告</option>
+                                <option value="dashboard">仪表盘</option>
+                                <option value="other">其他</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="data-content" class="form-label">数据内容</label>
+                            <textarea class="form-control" id="data-content" name="content" rows="5" required></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" id="save-data-btn">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 查看数据模态框 -->
+    <div class="modal fade" id="view-data-modal" tabindex="-1" aria-labelledby="view-data-modal-label" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="view-data-modal-label">查看数据</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">数据名称</label>
+                        <p id="view-data-name" class="form-control-plaintext"></p>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">数据类型</label>
+                        <p id="view-data-type" class="form-control-plaintext"></p>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">创建者</label>
+                        <p id="view-data-creator" class="form-control-plaintext"></p>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">创建时间</label>
+                        <p id="view-data-create-time" class="form-control-plaintext"></p>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">更新时间</label>
+                        <p id="view-data-update-time" class="form-control-plaintext"></p>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">数据内容</label>
+                        <pre id="view-data-content" class="bg-light p-3 rounded" style="max-height: 300px; overflow-y: auto;"></pre>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 删除确认模态框 -->
+    <div class="modal fade" id="delete-modal" tabindex="-1" aria-labelledby="delete-modal-label" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="delete-modal-label">确认删除</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>您确定要删除此数据吗？此操作不可撤销。</p>
+                    <p class="fw-bold" id="delete-data-name"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-danger" id="confirm-delete-btn">确认删除</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 当前页码和每页显示数量
+        let currentPage = 1;
+        let pageSize = 10;
+        let currentDataId = null;
+        let currentDataName = null;
+
+        // 初始化页面
+        document.addEventListener('DOMContentLoaded', function() {
+            // 加载数据
+            loadData();
+
+            // 绑定搜索按钮事件
+            document.getElementById('search-btn').addEventListener('click', function() {
+                searchData();
+            });
+
+            // 绑定搜索输入框回车事件
+            document.getElementById('search-input').addEventListener('keyup', function(event) {
+                if (event.key === 'Enter') {
+                    searchData();
+                }
+            });
+
+            // 绑定添加数据按钮事件
+            document.getElementById('add-data-btn').addEventListener('click', function() {
+                openAddDataModal();
+            });
+
+            // 绑定保存数据按钮事件
+            document.getElementById('save-data-btn').addEventListener('click', function() {
+                saveData();
+            });
+
+            // 绑定AI助手按钮事件
+            document.getElementById('aiAssistantBtn').addEventListener('click', function() {
+                toggleAiAssistant();
+            });
+
+            // 绑定关闭AI助手按钮事件
+            document.getElementById('closeAiPanel').addEventListener('click', function() {
+                hideAiAssistant();
+            });
+
+            // 绑定发送AI问题按钮事件
+            document.getElementById('sendAiQuestion').addEventListener('click', function() {
+                sendAiQuestion();
+            });
+
+            // 绑定AI问题输入框回车事件
+            document.getElementById('aiQuestion').addEventListener('keyup', function(event) {
+                if (event.key === 'Enter') {
+                    sendAiQuestion();
+                }
+            });
+        });
+
+        // 加载数据
+        function loadData(page = 1, search = '') {
+            currentPage = page;
+            const loadingIndicator = document.createElement('tr');
+            loadingIndicator.innerHTML = `
+                <td colspan="7" class="text-center py-4">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">加载中...</span>
+                    </div>
+                    <p class="mt-2">正在加载数据...</p>
+                </td>
+            `;
+            document.getElementById('data-table-body').innerHTML = '';
+            document.getElementById('data-table-body').appendChild(loadingIndicator);
+
+            // 构建API请求URL
+            let url = `/api/data?page=${page}&pageSize=${pageSize}`;
+            if (search) {
+                url += `&q=${encodeURIComponent(search)}`;
+            }
+
+            // 发送API请求
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        renderDataTable(data.data);
+                        renderPagination(data.total, page, pageSize, search);
+                    } else {
+                        showNotification('加载数据失败', data.message, 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('加载数据时出错:', error);
+                    showNotification('加载数据失败', '网络错误，请稍后重试', 'error');
+                });
+        }
+
+        // 渲染数据表格
+        function renderDataTable(dataList) {
+            const tableBody = document.getElementById('data-table-body');
+            tableBody.innerHTML = '';
+
+            if (dataList.length === 0) {
+                const emptyRow = document.createElement('tr');
+                emptyRow.innerHTML = `
+                    <td colspan="7" class="text-center py-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" class="bi bi-folder-x" viewBox="0 0 16 16">
+                            <path d="M.54 3.87.5 3a2 2 0 0 1 2-2h3.672a2 2 0 0 1 1.414.586l.828.828A2 2 0 0 0 9.828 3H15a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V5a2 2 0 0 1 .54-1.13zm6.334-1.06A1 1 0 0 0 6.172 2H2.5a1 1 0 0 0-1 .981l.006.139C1.72 3.042 1.95 3 2.19 3h5.396l-.707-.707z"/>
+                            <path d="M6.146 11.146a.5.5 0 0 1 .708 0L8 11.793l1.146-1.147a.5.5 0 1 1 .708.708L8.707 12.5l1.147 1.146a.5.5 0 0 1-.708.708L8 13.207l-1.146 1.147a.5.5 0 0 1-.708-.708L7.293 12.5 6.146 11.354a.5.5 0 0 1 0-.708z"/>
+                        </svg>
+                        <p class="mt-2">没有找到数据</p>
+                    </td>
+                `;
+                tableBody.appendChild(emptyRow);
+                return;
+            }
+
+            dataList.forEach(data => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${data.data_id}</td>
+                    <td>${data.data_name}</td>
+                    <td>${data.data_type}</td>
+                    <td>${data.creator}</td>
+                    <td>${formatDateTime(data.create_time)}</td>
+                    <td>${formatDateTime(data.update_time)}</td>
+                    <td>
+                        <button class="btn btn-sm btn-info view-data-btn" data-id="${data.data_id}">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8zM1.173 8a13.133 13.133 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5c2.12 0 3.879 1.168 5.168 2.457A13.133 13.133 0 0 1 14.828 8c-.058.087-.122.183-.195.288-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5c-2.12 0-3.879-1.168-5.168-2.457A13.134 13.134 0 0 1 1.172 8z"/>
+                                <path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0z"/>
+                            </svg>
+                            查看
+                        </button>
+                        ${data.can_edit ? `
+                        <button class="btn btn-sm btn-warning edit-data-btn" data-id="${data.data_id}">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708l-3-3zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207l6.5-6.5zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.499.499 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11l.178-.178z"/>
+                            </svg>
+                            编辑
+                        </button>` : ''}
+                        ${data.can_delete ? `
+                        <button class="btn btn-sm btn-danger delete-data-btn" data-id="${data.data_id}" data-name="${data.data_name}">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+                                <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+                            </svg>
+                            删除
+                        </button>` : ''}
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+
+            // 绑定查看按钮事件
+            document.querySelectorAll('.view-data-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const dataId = this.getAttribute('data-id');
+                    viewData(dataId);
+                });
+            });
+
+            // 绑定编辑按钮事件
+            document.querySelectorAll('.edit-data-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const dataId = this.getAttribute('data-id');
+                    editData(dataId);
+                });
+            });
+
+            // 绑定删除按钮事件
+            document.querySelectorAll('.delete-data-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const dataId = this.getAttribute('data-id');
+                    const dataName = this.getAttribute('data-name');
+                    confirmDelete(dataId, dataName);
+                });
+            });
+        }
+
+        // 渲染分页控件
+        function renderPagination(total, currentPage, pageSize, search) {
+            const pagination = document.getElementById('pagination');
+            pagination.innerHTML = '';
+
+            const totalPages = Math.ceil(total / pageSize);
+
+            if (totalPages <= 1) {
+                return;
+            }
+
+            // 添加首页按钮
+            const firstPageItem = document.createElement('li');
+            firstPageItem.className = 'page-item' + (currentPage === 1 ? ' disabled' : '');
+            firstPageItem.innerHTML = `
+                <a class="page-link" href="#" data-page="1">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path fill-rule="evenodd" d="M15 8a.5.5 0 0 0-.5-.5H2.707l3.147-3.146a.5.5 0 1 0-.708-.708l-4 4a.5.5 0 0 0 0 .708l4 4a.5.5 0 0 0 .708-.708L2.707 8.5H14.5A.5.5 0 0 0 15 8z"/>
+                    </svg>
+                </a>
+            `;
+            firstPageItem.querySelector('a').addEventListener('click', function(e) {
+                e.preventDefault();
+                if (!this.parentElement.classList.contains('disabled')) {
+                    loadData(1, search);
+                }
+            });
+            pagination.appendChild(firstPageItem);
+
+            // 添加前一页按钮
+            const prevPageItem = document.createElement('li');
+            prevPageItem.className = 'page-item' + (currentPage === 1 ? ' disabled' : '');
+            prevPageItem.innerHTML = `
+                <a class="page-link" href="#" data-page="${currentPage - 1}">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path fill-rule="evenodd" d="M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0z"/>
+                    </svg>
+                </a>
+            `;
+            prevPageItem.querySelector('a').addEventListener('click', function(e) {
+                e.preventDefault();
+                if (!this.parentElement.classList.contains('disabled')) {
+                    loadData(currentPage - 1, search);
+                }
+            });
+            pagination.appendChild(prevPageItem);
+
+            // 添加页码按钮
+            let startPage = Math.max(1, currentPage - 2);
+            let endPage = Math.min(totalPages, startPage + 4);
+
+            if (endPage - startPage < 4 && startPage > 1) {
+                startPage = Math.max(1, endPage - 4);
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                const pageItem = document.createElement('li');
+                pageItem.className = 'page-item' + (i === currentPage ? ' active' : '');
+                pageItem.innerHTML = `
+                    <a class="page-link" href="#" data-page="${i}">${i}</a>
+                `;
+                pageItem.querySelector('a').addEventListener('click', function(e) {
+                    e.preventDefault();
+                    loadData(parseInt(this.getAttribute('data-page')), search);
+                });
+                pagination.appendChild(pageItem);
+            }
+
+            // 添加后一页按钮
+            const nextPageItem = document.createElement('li');
+            nextPageItem.className = 'page-item' + (currentPage === totalPages ? ' disabled' : '');
+            nextPageItem.innerHTML = `
+                <a class="page-link" href="#" data-page="${currentPage + 1}">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path fill-rule="evenodd" d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708z"/>
+                    </svg>
+                </a>
+            `;
+            nextPageItem.querySelector('a').addEventListener('click', function(e) {
+                e.preventDefault();
+                if (!this.parentElement.classList.contains('disabled')) {
+                    loadData(currentPage + 1, search);
+                }
+            });
+            pagination.appendChild(nextPageItem);
+
+            // 添加尾页按钮
+            const lastPageItem = document.createElement('li');
+            lastPageItem.className = 'page-item' + (currentPage === totalPages ? ' disabled' : '');
+            lastPageItem.innerHTML = `
+                <a class="page-link" href="#" data-page="${totalPages}">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path fill-rule="evenodd" d="M1 8a.5.5 0 0 1 .5-.5h11.793l-3.147-3.146a.5.5 0 0 1 .708-.708l4 4a.5.5 0 0 1 0 .708l-4 4a.5.5 0 0 1-.708-.708L13.293 8.5H1.5A.5.5 0 0 1 1 8z"/>
+                    </svg>
+                </a>
+            `;
+            lastPageItem.querySelector('a').addEventListener('click', function(e) {
+                e.preventDefault();
+                if (!this.parentElement.classList.contains('disabled')) {
+                    loadData(totalPages, search);
+                }
+            });
+            pagination.appendChild(lastPageItem);
+        }
+
+        // 搜索数据
+        function searchData() {
+            const searchTerm = document.getElementById('search-input').value.trim();
+            loadData(1, searchTerm);
+        }
+
+        // 打开添加数据模态框
+        function openAddDataModal() {
+            document.getElementById('data-modal-label').textContent = '添加数据';
+            document.getElementById('data-form').reset();
+            document.getElementById('data-id').value = '';
+
+            // 根据用户角色限制数据类型
+            const userRole = '{{ session.user.role }}';
+            const dataTypeSelect = document.getElementById('data-type');
+
+            // 清空所有选项
+            dataTypeSelect.innerHTML = '';
+
+            // 普通用户只能添加查询类型数据
+            if (userRole === 'user') {
+                const option = document.createElement('option');
+                option.value = 'query';
+                option.textContent = '查询';
+                dataTypeSelect.appendChild(option);
+            } else {
+                // 管理员和设计师可以添加所有类型数据
+                const types = [
+                    { value: 'query', text: '查询' },
+                    { value: 'report', text: '报告' },
+                    { value: 'dashboard', text: '仪表盘' },
+                    { value: 'other', text: '其他' }
+                ];
+
+                types.forEach(type => {
+                    const option = document.createElement('option');
+                    option.value = type.value;
+                    option.textContent = type.text;
+                    dataTypeSelect.appendChild(option);
+                });
+            }
+
+            const dataModal = new bootstrap.Modal(document.getElementById('data-modal'));
+            dataModal.show();
+        }
+
+        // 查看数据
+        function viewData(dataId) {
+            fetch(`/api/data/${dataId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        const dataItem = data.data;
+                        document.getElementById('view-data-name').textContent = dataItem.data_name;
+                        document.getElementById('view-data-type').textContent = dataItem.data_type;
+                        document.getElementById('view-data-creator').textContent = dataItem.creator;
+                        document.getElementById('view-data-create-time').textContent = formatDateTime(dataItem.create_time);
+                        document.getElementById('view-data-update-time').textContent = formatDateTime(dataItem.update_time);
+                        document.getElementById('view-data-content').textContent = dataItem.content;
+
+                        const viewModal = new bootstrap.Modal(document.getElementById('view-data-modal'));
+                        viewModal.show();
+                    } else {
+                        showNotification('查看数据失败', data.message, 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('查看数据时出错:', error);
+                    showNotification('查看数据失败', '网络错误，请稍后重试', 'error');
+                });
+        }
+
+        // 编辑数据
+        function editData(dataId) {
+            fetch(`/api/data/${dataId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        const dataItem = data.data;
+                        document.getElementById('data-modal-label').textContent = '编辑数据';
+                        document.getElementById('data-id').value = dataItem.data_id;
+                        document.getElementById('data-name').value = dataItem.data_name;
+                        document.getElementById('data-type').value = dataItem.data_type;
+                        document.getElementById('data-content').value = dataItem.content;
+
+                        const dataModal = new bootstrap.Modal(document.getElementById('data-modal'));
+                        dataModal.show();
+                    } else {
+                        showNotification('加载数据失败', data.message, 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('加载数据时出错:', error);
+                    showNotification('加载数据失败', '网络错误，请稍后重试', 'error');
+                });
+        }
+
+        // 保存数据
+        function saveData() {
+            const dataId = document.getElementById('data-id').value;
+            const formData = {
+                data_id: dataId,
+                data_name: document.getElementById('data-name').value,
+                data_type: document.getElementById('data-type').value,
+                content: document.getElementById('data-content').value
+            };
+
+            // 验证必填字段
+            if (!formData.data_name || !formData.data_type || !formData.content) {
+                showNotification('操作失败', '请填写所有必填字段', 'error');
+                return;
+            }
+
+            const isEdit = !!dataId;
+            const method = isEdit ? 'PUT' : 'POST';
+            const url = '/api/data'; // 统一使用同一个端点
+
+            fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(formData)
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(err => {
+                            throw new Error(err.message || '服务器错误');
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.status === 'success') {
+                        showNotification('操作成功', isEdit ? '数据更新成功' : '数据添加成功', 'success');
+                        // 关闭模态框并刷新数据
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('data-modal'));
+                        modal.hide();
+                        loadData(currentPage);
+                    } else {
+                        throw new Error(data.message || '操作失败');
+                    }
+                })
+                .catch(error => {
+                    console.error('保存数据时出错:', error);
+                    showNotification('操作失败', error.message || '网络错误，请稍后重试', 'error');
+                });
+        }
+
+        // 确认删除
+        function confirmDelete(dataId, dataName) {
+            currentDataId = dataId;
+            currentDataName = dataName;
+            document.getElementById('delete-data-name').textContent = dataName;
+
+            const deleteModal = new bootstrap.Modal(document.getElementById('delete-modal'));
+            deleteModal.show();
+        }
+
+        // 执行删除
+        function executeDelete() {
+            if (!currentDataId) {
+                return;
+            }
+
+            fetch('/api/data', {  // 修改为使用统一端点
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    data_id: currentDataId
+                })
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(err => {
+                            throw new Error(err.message || '服务器错误');
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.status === 'success') {
+                        showNotification('操作成功', '数据删除成功', 'success');
+                        const deleteModal = bootstrap.Modal.getInstance(document.getElementById('delete-modal'));
+                        deleteModal.hide();
+                        loadData(currentPage);
+                    } else {
+                        throw new Error(data.message || '删除失败');
+                    }
+                })
+                .catch(error => {
+                    console.error('删除数据时出错:', error);
+                    showNotification('操作失败', error.message || '网络错误，请稍后重试', 'error');
+                })
+                .finally(() => {
+                    currentDataId = null;
+                    currentDataName = null;
+                });
+        }
+
+        // 绑定确认删除按钮事件
+        document.getElementById('confirm-delete-btn').addEventListener('click', executeDelete);
+
+        // 显示通知
+        function showNotification(title, message, type = 'info') {
+            const toast = document.getElementById('notification-toast');
+            const toastTitle = document.getElementById('toast-title');
+            const toastMessage = document.getElementById('toast-message');
+
+            toastTitle.textContent = title;
+            toastMessage.textContent = message;
+
+            // 设置通知类型样式
+            if (type === 'success') {
+                toast.classList.remove('text-bg-danger', 'text-bg-warning', 'text-bg-info');
+                toast.classList.add('text-bg-success');
+            } else if (type === 'error') {
+                toast.classList.remove('text-bg-success', 'text-bg-warning', 'text-bg-info');
+                toast.classList.add('text-bg-danger');
+            } else if (type === 'warning') {
+                toast.classList.remove('text-bg-success', 'text-bg-danger', 'text-bg-info');
+                toast.classList.add('text-bg-warning');
+            } else {
+                toast.classList.remove('text-bg-success', 'text-bg-danger', 'text-bg-warning');
+                toast.classList.add('text-bg-info');
+            }
+
+            // 显示通知
+            const bsToast = new bootstrap.Toast(toast);
+            bsToast.show();
+        }
+
+        // 切换AI助手显示状态
+        function toggleAiAssistant() {
+            const panel = document.getElementById('aiAssistantPanel');
+            if (panel.style.display === 'flex') {
+                panel.style.display = 'none';
+            } else {
+                panel.style.display = 'flex';
+                document.getElementById('aiQuestion').focus();
+            }
+        }
+
+        // 隐藏AI助手
+        function hideAiAssistant() {
+            document.getElementById('aiAssistantPanel').style.display = 'none';
+        }
+
+        // 发送AI问题
+        function sendAiQuestion() {
+            const question = document.getElementById('aiQuestion').value.trim();
+            if (!question) {
+                return;
+            }
+
+            // 清空输入框
+            document.getElementById('aiQuestion').value = '';
+
+            // 显示用户问题
+            const messagesContainer = document.getElementById('aiMessages');
+            const userMessage = document.createElement('div');
+            userMessage.className = 'message user-message';
+            userMessage.textContent = question;
+            messagesContainer.appendChild(userMessage);
+
+            // 显示AI正在输入的状态
+            const typingIndicator = document.createElement('div');
+            typingIndicator.className = 'typing-indicator';
+            typingIndicator.innerHTML = `
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+            `;
+            messagesContainer.appendChild(typingIndicator);
+
+            // 滚动到底部
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+            // 发送问题到AI API
+            fetch('/api/ai/ask', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    question: question,
+                    context: '用户正在使用数据管理页面'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                // 移除打字指示器
+                messagesContainer.removeChild(typingIndicator);
+
+                if (data.status === 'success') {
+                    // 显示AI回答
+                    const aiMessage = document.createElement('div');
+                    aiMessage.className = 'message ai-message';
+                    aiMessage.textContent = data.answer;
+                    messagesContainer.appendChild(aiMessage);
+                } else {
+                    // 显示错误信息
+                    const errorMessage = document.createElement('div');
+                    errorMessage.className = 'message ai-message';
+                    errorMessage.textContent = '抱歉，AI助手暂时无法回答您的问题。请稍后再试。';
+                    messagesContainer.appendChild(errorMessage);
+                }
+
+                // 滚动到底部
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            })
+            .catch(error => {
+                // 移除打字指示器
+                messagesContainer.removeChild(typingIndicator);
+
+                // 显示错误信息
+                const errorMessage = document.createElement('div');
+                errorMessage.className = 'message ai-message';
+                errorMessage.textContent = '抱歉，AI助手暂时无法回答您的问题。请稍后再试。';
+                messagesContainer.appendChild(errorMessage);
+
+                // 滚动到底部
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+                console.error('AI请求出错:', error);
+            });
+        }
+
+        // 格式化日期时间
+        function formatDateTime(dateTimeString) {
+            if (!dateTimeString) {
+                return '未知';
+            }
+
+            // 假设dateTimeString是ISO格式
+            const date = new Date(dateTimeString);
+
+            if (isNaN(date.getTime())) {
+                // 尝试其他格式
+                const parts = dateTimeString.split(/[- :]/);
+                if (parts.length >= 6) {
+                    const year = parseInt(parts[0]);
+                    const month = parseInt(parts[1]) - 1;
+                    const day = parseInt(parts[2]);
+                    const hour = parseInt(parts[3]);
+                    const minute = parseInt(parts[4]);
+                    const second = parseInt(parts[5]);
+                    const adjustedDate = new Date(year, month, day, hour, minute, second);
+
+                    if (!isNaN(adjustedDate.getTime())) {
+                        return adjustedDate.toLocaleString();
+                    }
+                }
+
+                return dateTimeString;
+            }
+
+            return date.toLocaleString();
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,118 @@
+﻿<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>992c421d-eb4c-4182-afb9-6f7ee74782ab</ProjectGuid>
+    <ProjectHome>.</ProjectHome>
+    <StartupFile>run.py</StartupFile>
+    <SearchPath>
+    </SearchPath>
+    <WorkingDirectory>.</WorkingDirectory>
+    <OutputPath>.</OutputPath>
+    <Name>用户权限系统1</Name>
+    <RootNamespace>用户权限系统1</RootNamespace>
+    <InterpreterId>MSBuild|env|$(MSBuildProjectFullPath)</InterpreterId>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <DebugSymbols>true</DebugSymbols>
+    <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <DebugSymbols>true</DebugSymbols>
+    <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
+  </PropertyGroup>
+  <ItemGroup>
+    <Folder Include="app\" />
+    <Folder Include="app\css\" />
+    <Folder Include="app\js\" />
+    <Folder Include="app\static\" />
+    <Folder Include="app\templates\" />
+    <Folder Include="app\__pycache__\" />
+    <Folder Include="instance\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="app\auth.py" />
+    <Compile Include="app\models.py" />
+    <Compile Include="app\routes.py" />
+    <Compile Include="app\__init__.py" />
+    <Compile Include="run.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include=".env" />
+    <Content Include="app\css\bootstrap-grid.css" />
+    <Content Include="app\css\bootstrap-grid.css.map" />
+    <Content Include="app\css\bootstrap-grid.min.css" />
+    <Content Include="app\css\bootstrap-grid.min.css.map" />
+    <Content Include="app\css\bootstrap-grid.rtl.css" />
+    <Content Include="app\css\bootstrap-grid.rtl.css.map" />
+    <Content Include="app\css\bootstrap-grid.rtl.min.css" />
+    <Content Include="app\css\bootstrap-grid.rtl.min.css.map" />
+    <Content Include="app\css\bootstrap-reboot.css" />
+    <Content Include="app\css\bootstrap-reboot.css.map" />
+    <Content Include="app\css\bootstrap-reboot.min.css" />
+    <Content Include="app\css\bootstrap-reboot.min.css.map" />
+    <Content Include="app\css\bootstrap-reboot.rtl.css" />
+    <Content Include="app\css\bootstrap-reboot.rtl.css.map" />
+    <Content Include="app\css\bootstrap-reboot.rtl.min.css" />
+    <Content Include="app\css\bootstrap-reboot.rtl.min.css.map" />
+    <Content Include="app\css\bootstrap-utilities.css" />
+    <Content Include="app\css\bootstrap-utilities.css.map" />
+    <Content Include="app\css\bootstrap-utilities.min.css" />
+    <Content Include="app\css\bootstrap-utilities.min.css.map" />
+    <Content Include="app\css\bootstrap-utilities.rtl.css" />
+    <Content Include="app\css\bootstrap-utilities.rtl.css.map" />
+    <Content Include="app\css\bootstrap-utilities.rtl.min.css" />
+    <Content Include="app\css\bootstrap-utilities.rtl.min.css.map" />
+    <Content Include="app\css\bootstrap.css" />
+    <Content Include="app\css\bootstrap.css.map" />
+    <Content Include="app\css\bootstrap.min.css" />
+    <Content Include="app\css\bootstrap.min.css.map" />
+    <Content Include="app\css\bootstrap.rtl.css" />
+    <Content Include="app\css\bootstrap.rtl.css.map" />
+    <Content Include="app\css\bootstrap.rtl.min.css" />
+    <Content Include="app\css\bootstrap.rtl.min.css.map" />
+    <Content Include="app\js\bootstrap.bundle.js" />
+    <Content Include="app\js\bootstrap.bundle.js.map" />
+    <Content Include="app\js\bootstrap.bundle.min.js" />
+    <Content Include="app\js\bootstrap.bundle.min.js.map" />
+    <Content Include="app\js\bootstrap.esm.js" />
+    <Content Include="app\js\bootstrap.esm.js.map" />
+    <Content Include="app\js\bootstrap.esm.min.js" />
+    <Content Include="app\js\bootstrap.esm.min.js.map" />
+    <Content Include="app\js\bootstrap.js" />
+    <Content Include="app\js\bootstrap.js.map" />
+    <Content Include="app\js\bootstrap.min.js" />
+    <Content Include="app\js\bootstrap.min.js.map" />
+    <Content Include="app\templates\404.html" />
+    <Content Include="app\templates\data_management.html" />
+    <Content Include="app\templates\login.html" />
+    <Content Include="app\templates\main.html" />
+    <Content Include="app\templates\unauthorized.html" />
+    <Content Include="app\templates\user_management.html" />
+    <Content Include="app\__pycache__\auth.cpython-310.pyc" />
+    <Content Include="app\__pycache__\models.cpython-310.pyc" />
+    <Content Include="app\__pycache__\routes.cpython-310.pyc" />
+    <Content Include="app\__pycache__\__init__.cpython-310.pyc" />
+    <Content Include="requirements.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Interpreter Include="env\">
+      <Id>env</Id>
+      <Version>3.10</Version>
+      <Description>env (Python 3.10 (64-bit))</Description>
+      <InterpreterPath>Scripts\python.exe</InterpreterPath>
+      <WindowsInterpreterPath>Scripts\pythonw.exe</WindowsInterpreterPath>
+      <PathEnvironmentVariable>PYTHONPATH</PathEnvironmentVariable>
+      <Architecture>X64</Architecture>
+    </Interpreter>
+  </ItemGroup>
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
+  <!-- Uncomment the CoreCompile target to enable the Build command in
+       Visual Studio and specify your pre- and post-build commands in
+       the BeforeBuild and AfterBuild targets below. -->
+  <!--<Target Name="CoreCompile" />-->
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+</Project>

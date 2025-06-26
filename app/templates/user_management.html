@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户权限系统 - 用户管理</title>
+    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+    <style>
+        .sidebar {
+            height: 100vh;
+            background-color: #343a40;
+            color: white;
+            padding: 20px;
+        }
+
+            .sidebar a {
+                color: white;
+                text-decoration: none;
+                display: block;
+                padding: 10px 15px;
+                margin-bottom: 5px;
+                border-radius: 4px;
+            }
+
+                .sidebar a:hover {
+                    background-color: #495057;
+                }
+
+        .main-content {
+            padding: 20px;
+        }
+
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1100;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/main">用户权限系统</a>
+            <div class="d-flex">
+                <span class="navbar-text me-3">欢迎, {{ session.user.username }}</span>
+                <a href="/logout" class="btn btn-outline-light">退出登录</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-2 sidebar">
+                <a href="/main">首页</a>
+                <a href="/data_management">数据管理</a>
+                <a href="/user_management" class="bg-primary">用户管理</a>
+            </div>
+            <div class="col-md-10 main-content">
+                <div class="mb-4">
+                    <h2>用户管理</h2>
+                    <div class="input-group mb-3">
+                        <input type="text" id="searchUser" class="form-control" placeholder="搜索用户...">
+                        <button class="btn btn-outline-secondary" type="button" id="searchUserBtn">搜索</button>
+                        <button class="btn btn-primary" type="button" id="addUserBtn">添加用户</button>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped">
+                        <thead>
+                            <tr>
+                                <th>用户ID</th>
+                                <th>用户名</th>
+                                <th>角色</th>
+                                <th>创建时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="userTableBody">
+                            <!-- 数据将通过JavaScript动态加载 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加/编辑用户模态框 -->
+    <div class="modal fade" id="userModal" tabindex="-1" aria-labelledby="userModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="userModalLabel">添加用户</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="userForm">
+                        <input type="hidden" id="userId" name="user_id">
+                        <div class="mb-3">
+                            <label for="username" class="form-label">用户名</label>
+                            <input type="text" class="form-control" id="username" name="username" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="password" class="form-label">密码</label>
+                            <input type="password" class="form-control" id="password" name="password"
+                                   {% if not edit_mode %}required{% endif %}>
+                            <div class="form-text">留空则不修改密码</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="role" class="form-label">角色</label>
+                            <select class="form-control" id="role" name="role" required>
+                                <option value="admin">管理员</option>
+                                <option value="designer">设计师</option>
+                                <option value="user">普通用户</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" id="saveUserBtn">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 通知提示 -->
+    <div class="toast-container">
+        <div id="toastMessage" class="toast align-items-center text-white bg-success" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body" id="toastBody">操作成功</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 初始化Toast
+        const toastEl = document.getElementById('toastMessage');
+        const toastBody = document.getElementById('toastBody');
+        const toast = new bootstrap.Toast(toastEl);
+
+        // 显示通知
+        function showToast(message, isSuccess = true) {
+            toastBody.textContent = message;
+            toastEl.classList.remove('bg-success', 'bg-danger');
+            toastEl.classList.add(isSuccess ? 'bg-success' : 'bg-danger');
+            toast.show();
+        }
+
+        // 加载用户列表
+        function loadUsers(condition = '') {
+            fetch(`/api/users?q=${encodeURIComponent(condition)}`)
+                .then(response => response.json())
+                .then(data => {
+                    const tableBody = document.getElementById('userTableBody');
+                    tableBody.innerHTML = '';
+
+                    if (data.data && data.data.length > 0) {
+                        data.data.forEach(user => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                        <td>${user.user_id}</td>
+                                        <td>${user.username}</td>
+                                        <td>${user.role}</td>
+                                        <td>${user.create_time}</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-warning edit-user" data-id="${user.user_id}">编辑</button>
+                                            <button class="btn btn-sm btn-danger delete-user" data-id="${user.user_id}">删除</button>
+                                        </td>
+                                    `;
+                            tableBody.appendChild(row);
+                        });
+
+                        // 添加编辑和删除事件
+                        document.querySelectorAll('.edit-user').forEach(btn => {
+                            btn.addEventListener('click', function () {
+                                const userId = this.getAttribute('data-id');
+                                editUser(userId);
+                            });
+                        });
+
+                        document.querySelectorAll('.delete-user').forEach(btn => {
+                            btn.addEventListener('click', function () {
+                                const userId = this.getAttribute('data-id');
+                                deleteUser(userId);
+                            });
+                        });
+                    } else {
+                        tableBody.innerHTML = '<tr><td colspan="5" class="text-center">没有找到用户</td></tr>';
+                    }
+                })
+                .catch(error => {
+                    console.error('加载用户失败:', error);
+                    showToast('加载用户失败，请重试', false);
+                });
+        }
+
+        // 初始化模态框
+        const userModal = new bootstrap.Modal(document.getElementById('userModal'));
+
+        // 添加用户
+        document.getElementById('addUserBtn').addEventListener('click', function () {
+            document.getElementById('userModalLabel').textContent = '添加用户';
+            document.getElementById('userForm').reset();
+            document.getElementById('userId').value = '';
+            document.getElementById('password').required = true;
+            userModal.show();
+        });
+
+        // 编辑用户
+        function editUser(userId) {
+            fetch(`/api/users/${userId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('网络响应不正常');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.status === 'success' && data.data) {
+                        const user = data.data;
+                        document.getElementById('userId').value = user.user_id;
+                        document.getElementById('username').value = user.username;
+                        document.getElementById('role').value = user.role;
+                        document.getElementById('password').value = '';
+                        document.getElementById('password').required = false;
+                        document.getElementById('userModalLabel').textContent = '编辑用户';
+                        userModal.show();
+                    } else {
+                        showToast('用户不存在', false);
+                    }
+                })
+                .catch(error => {
+                    console.error('获取用户信息失败:', error);
+                    showToast('获取用户信息失败，请重试', false);
+                });
+        }
+
+        // 保存用户
+        document.getElementById('saveUserBtn').addEventListener('click', function () {
+            const userId = document.getElementById('userId').value;
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const role = document.getElementById('role').value;
+
+            // 验证表单
+            if (!username || (!password && !userId) || !role) {
+                showToast('请填写所有必填字段', false);
+                return;
+            }
+
+            const user = {
+                username: username,
+                role: role
+            };
+
+            if (password) {
+                user.password = password;
+            }
+
+            if (userId) {
+                user.user_id = parseInt(userId);
+            }
+
+            // 禁用按钮防止重复提交
+            const saveBtn = this;
+            saveBtn.disabled = true;
+            saveBtn.textContent = '保存中...';
+
+            const method = userId ? 'PUT' : 'POST';
+            const successMessage = userId ? '用户更新成功' : '用户添加成功';
+
+            fetch('/api/users', {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(user)
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        showToast(successMessage);
+                        userModal.hide();
+                        loadUsers(); // 确保添加成功后刷新列表
+                    } else {
+                        throw new Error(data.message || '操作失败');
+                    }
+                })
+                .catch(error => {
+                    console.error('保存用户失败:', error);
+                    showToast('保存失败: ' + error.message, false);
+                })
+                .finally(() => {
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = '保存';
+                });
+        });
+
+        // 删除用户
+        function deleteUser(userId) {
+            if (!confirm('确定要删除此用户吗？')) {
+                return;
+            }
+
+            fetch('/api/users', {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ user_id: parseInt(userId) })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        showToast('用户删除成功');
+                        loadUsers();
+                    } else {
+                        throw new Error(data.message || '删除失败');
+                    }
+                })
+                .catch(error => {
+                    console.error('删除用户失败:', error);
+                    showToast('删除失败: ' + error.message, false);
+                });
+        }
+
+        // 搜索用户
+        document.getElementById('searchUserBtn').addEventListener('click', function () {
+            const condition = document.getElementById('searchUser').value;
+            loadUsers(condition);
+        });
+
+        // 回车键搜索
+        document.getElementById('searchUser').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                loadUsers(this.value);
+            }
+        });
+
+        // 初始化加载用户
+        loadUsers();
+    </script>
+</body>
+</html>

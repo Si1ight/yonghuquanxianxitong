@@ -1,0 +1,275 @@
+<!-- main.html 模板修改 -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户权限系统 - 首页</title>
+    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+    <style>
+        /* 保持原有样式不变 */
+        .sidebar {
+            height: 100vh;
+            background-color: #343a40;
+            color: white;
+            padding: 20px;
+        }
+
+            .sidebar a {
+                color: white;
+                text-decoration: none;
+                display: block;
+                padding: 10px 15px;
+                margin-bottom: 5px;
+                border-radius: 4px;
+            }
+
+                .sidebar a:hover {
+                    background-color: #495057;
+                }
+
+        .main-content {
+            padding: 20px;
+        }
+
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1100;
+        }
+
+        /* AI助手样式 */
+        #aiAssistant {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+
+        #aiAssistantBtn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            font-size: 24px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+            #aiAssistantBtn:hover {
+                background-color: #0069d9;
+                transform: scale(1.05);
+            }
+
+        #aiAssistantPanel {
+            display: none;
+            width: 350px;
+            height: 500px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            overflow: hidden;
+            flex-direction: column;
+        }
+
+        .ai-header {
+            background: #343a40;
+            color: white;
+            padding: 10px 15px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .ai-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .ai-input-area {
+            padding: 10px;
+            border-top: 1px solid #eee;
+            background: #f8f9fa;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 10px 15px;
+            border-radius: 18px;
+            word-wrap: break-word;
+            line-height: 1.4;
+        }
+
+        .user-message {
+            margin-left: auto;
+            background: #007bff;
+            color: white;
+            border-bottom-right-radius: 5px;
+        }
+
+        .ai-message {
+            margin-right: auto;
+            background: #f1f1f1;
+            color: #333;
+            border-bottom-left-radius: 5px;
+        }
+
+        .typing-indicator {
+            display: flex;
+            gap: 5px;
+            padding: 10px 15px;
+            background: #f1f1f1;
+            border-radius: 18px;
+            border-bottom-left-radius: 5px;
+            width: fit-content;
+            margin-bottom: 12px;
+        }
+
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background: #666;
+            border-radius: 50%;
+            animation: typingAnimation 1.4s infinite ease-in-out;
+        }
+
+            .typing-dot:nth-child(1) {
+                animation-delay: 0s;
+            }
+
+            .typing-dot:nth-child(2) {
+                animation-delay: 0.2s;
+            }
+
+            .typing-dot:nth-child(3) {
+                animation-delay: 0.4s;
+            }
+
+        @keyframes typingAnimation {
+            0%, 60%, 100% {
+                transform: translateY(0);
+            }
+
+            30% {
+                transform: translateY(-5px);
+            }
+        }
+
+        /* 表格样式增强 */
+        .table-responsive {
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        .table th {
+            background-color: #343a40;
+            color: white;
+        }
+
+        .table td, .table th {
+            vertical-align: middle;
+        }
+
+        /* 按钮样式增强 */
+        .btn-sm {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/main">用户权限系统</a>
+            <div class="d-flex">
+                <span class="navbar-text me-3">欢迎, {{ session.user.username }}</span>
+                <a href="/logout" class="btn btn-outline-light">退出登录</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-2 sidebar">
+                <a href="/main">首页</a>
+                <a href="/data_management">数据管理</a>
+                <!-- 只有管理员可以看到用户管理菜单 -->
+                {% if session.user.role == 'admin' %}
+                <a href="/user_management">用户管理</a>
+                {% endif %}
+            </div>
+            <div class="col-md-10 main-content">
+                <div class="jumbotron">
+                    <h1>用户权限系统</h1>
+                    <p class="lead">根据不同角色提供不同的功能权限</p>
+                    <hr class="my-4">
+                    <p>您的角色: {{ session.user.role }}</p>
+                    <p>
+                        {% if session.user.role == 'admin' %}
+                        您是管理员，拥有系统的所有权限。
+                        {% elif session.user.role == 'designer' %}
+                        您是设计师，拥有数据管理的全部权限。
+                        {% elif session.user.role == 'user' %}
+                        您是普通用户，只能查看数据。
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI助手 -->
+    <div id="aiAssistant">
+        <div id="aiAssistantPanel">
+            <div class="ai-header">
+                <span>AI助手</span>
+                <button type="button" class="btn-close btn-close-white" id="closeAiPanel"></button>
+            </div>
+            <div class="ai-messages" id="aiMessages">
+                <div class="message ai-message">
+                    您好！我是您的AI助手，可以回答关于本系统功能的问题。例如：
+                    <ul class="mt-2 mb-0">
+                        <li>不同用户角色的权限区别？</li>
+                        <li>如何添加新数据？</li>
+                        <li>如何搜索特定数据？</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="ai-input-area">
+                <div class="input-group">
+                    <input type="text" class="form-control" id="aiQuestion" placeholder="输入您的问题..." autocomplete="off">
+                    <button class="btn btn-primary" type="button" id="sendAiQuestion">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M15.854.146a.5.5 0 0 1 .11.54l-5.819 14.547a.5.5 0 0 1-.933.008L5.354 9.854a.5.5 0 1 1 .708-.708L10.5 13.793l5.439-5.44a.5.5 0 0 1 .708-.708l.002.001z" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <button class="btn btn-primary" id="aiAssistantBtn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M6 12.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5ZM3 8.062C3 6.76 4.235 5.765 5.53 5.886a26.58 26.58 0 0 0 4.94 0C11.765 5.765 13 6.76 13 8.062v1.157a.933.933 0 0 1-.765.935c-.845.147-2.34.346-4.235.346-1.895 0-3.39-.2-4.235-.346A.933.933 0 0 1 3 9.219V8.062Zm4.542-.827a.25.25 0 0 0-.217.068l-.92.9a24.767 24.767 0 0 1-1.871-.183.25.25 0 0 0-.068.495c.55.076 1.232.149 2.02.193a.25.25 0 0 0 .189-.071l.754-.736.847 1.71a.25.25 0 0 0 .404.062l.932-.97a25.286 25.286 0 0 0 1.922-.188.25.25 0 0 0-.068-.495c-.538.074-1.207.145-1.98.189a.25.25 0 0 0-.166.076l-.754.785-.842-1.7a.25.25 0 0 0-.182-.135Z" />
+                <path d="M8.5 1.866a1 1 0 1 0-1 0V3h-2A4.5 4.5 0 0 0 1 7.5V8a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1v1a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-1a1 1 0 0 0 1-1V9a1 1 0 0 0-1-1v-.5A4.5 4.5 0 0 0 10.5 3h-2V1.866ZM14 7.5V13a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7.5A3.5 3.5 0 0 1 5.5 4h5A3.5 3.5 0 0 1 14 7.5Z" />
+            </svg>
+        </button>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 这里可以添加首页的JavaScript逻辑
+    </script>
+</body>
+</html>
